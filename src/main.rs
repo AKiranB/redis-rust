@@ -1,15 +1,23 @@
 #![allow(unused_imports)]
 use std::{
-    io::Read,
+    io::{Read, Write},
     net::{TcpListener, TcpStream},
 };
+
+use crate::utils::format_resp;
+
+mod utils;
 
 enum RespValue {
     SimpleString(String),
     Error(String),
     Integer(i64),
-    BulkString(Vec<u8>), // raw bytes, may not be UTF-8
+    BulkString(Vec<u8>),
     Array(Vec<RespValue>),
+}
+
+struct Encoder {
+    buf: Vec<u8>,
 }
 
 struct Decoder {
@@ -18,22 +26,42 @@ struct Decoder {
 }
 
 impl Decoder {
-    fn parse_value(&mut self) -> RespValue {
-        match self.buf[self.offset] {
-            // b'*' => self.parse_array(),
-            // b'+' => self.parse_simple_string(),
-            // b'$' => self.parse_bulk_string(),
-            // b':' => self.parse_integer(),
-            // b'-' => self.parse_error(),
-            _ => panic!("unknown RESP type"),
-        }
+    // fn parse_value(&mut self) -> Vec<RespValue> {
+    //     match self.buf[self.offset] {
+    //         // b'*' => self.parse_array(),
+    //         // b'+' => self.parse_simple_string(),
+    //         // b'$' => self.parse_bulk_string(),
+    //         // b':' => self.parse_integer(),
+    //         // b'-' => self.parse_error(),
+    //         _ => panic!("unknown RESP type"),
+    //     }
+    // }
+    // fn parse_array(&mut self) {
+    //     self.offset += 1;
+    //     match String::from_utf8(self.buf[self.offset..].to_vec()) {
+    //         Ok(parsed) => return,
+    //     }
+
+    //     print!("{}", parsed);
+    // }
+}
+
+impl Encoder {
+    fn encode_string(&mut self, string: &str) {
+        let string_bytes = string.as_bytes();
+        format_resp(&mut self.buf, b'+', string_bytes);
     }
-    fn parse_array(&mut self) {}
 }
 
 fn handle_stream(stream: &mut TcpStream) {
     let mut buf: [u8; 512] = [0; 512];
-    let (bytes) = stream.read(&mut buf);
+    let (_) = stream.read(&mut buf);
+    let mut encoder = Encoder { buf: Vec::new() };
+    encoder.encode_string("PONG");
+
+    if let Err(e) = stream.write(&encoder.buf) {
+        print!("{}", e);
+    }
 }
 fn main() {
     println!("Logs from your program will appear here!");
